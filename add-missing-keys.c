@@ -1,9 +1,27 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 
 #define SSH_KEY_BUFF_SIZE 256
 #define DEFAULT_KEY_LIST_SIZE 2
+
+size_t str_len(char* str) {
+    size_t len = 0;
+    while (*(str + len) != '\0') {
+        len++;
+    }
+    return len;
+}
+
+bool str_eq(char* str1, char* str2) {
+    if (str_len(str1) != str_len(str2)) return false;
+    int len = str_len(str1);
+    for (size_t i = 0; i < len; i++) {
+        if (*(str1 + i) != *(str2 + i)) return false;
+    }
+    return true;
+}
 
 // will modify old_key_count as side effect
 // keep track of old_keys size via old_key_count
@@ -18,16 +36,16 @@ char* read_keys_from_file(FILE* f, int* key_count) {
     // stpcpy(test_str, "123");
     // char char_str[] = "123";
     // // =3, only counts chars (excl. '\0')
-    // printf("size of malloc_str: %zu\n", strlen(test_str));
+    // printf("size of malloc_str: %zu\n", str_len(test_str));
     // // this = 4, bc '\0' at the end is part of the data size in memory
     // printf("size of str_arr: %zu\n", sizeof(char_str));
     
     while (fgets(buffer, SSH_KEY_BUFF_SIZE, f)) {
         // add new line to end of each shh key string
-        if (*(buffer + strlen(buffer)-1) != '\n') {
-            // printf("last char in key is not new line: %s", buffer);
-            *(buffer + strlen(buffer)) = '\n';
-            *(buffer + strlen(buffer) + 1) = '\0';
+        if (*(buffer + str_len(buffer)-1) != '\n') {
+            *(buffer + str_len(buffer)) = '\n';
+            *(buffer + str_len(buffer) + 1) = '\0';
+            printf("added newline char to ssh key: %s", buffer);
         }
 
         strcpy(keys + ((*key_count) * SSH_KEY_BUFF_SIZE), buffer);
@@ -57,30 +75,6 @@ char* read_keys_from_location(const char* filename, int* old_key_count) {
     return result;
 }
 
-// char* read_new_keys(FILE* f, int* new_key_count) {
-//     char buffer[SSH_KEY_BUFF_SIZE];
-//     // allocate enough space to store 10 keys. As/if needed realloc more when reading keys
-//     char* new_keys = malloc(SSH_KEY_BUFF_SIZE * DEFAULT_KEY_LIST_SIZE);
-//     // open authorized_keys
-//     while (fgets(buffer, SSH_KEY_BUFF_SIZE, f)) {
-//         // printf("fgets iteration\n");
-//         strcpy(new_keys + ((*new_key_count) * SSH_KEY_BUFF_SIZE), buffer);
-//         (*new_key_count)++;
-//         printf("%i: %s", *new_key_count, buffer);
-//         // realloc memory for DEFAULT_KEY_LIST_SIZE more keys when you reach previous allocated memory limit (new_key_count % DEFAULT_KEY_LIST_SIZE) * 
-//         if (((*new_key_count) % DEFAULT_KEY_LIST_SIZE) == 0) {
-//             printf("added 2 more via realloc; key_count=%i\n",*new_key_count);
-//             char* tmp = realloc(new_keys, (SSH_KEY_BUFF_SIZE * ((*new_key_count / DEFAULT_KEY_LIST_SIZE)+1));
-//             if (!tmp) {
-//                 perror("failed realloc extra memory for old ssh keys array");
-//                 return NULL;
-//             }
-//             new_keys = tmp;
-//         }
-//     }
-//     return new_keys;
-// }
-
 int main(void) {
     int old_key_count = 0;
     int new_key_count = 0;
@@ -92,20 +86,17 @@ int main(void) {
     if (!new_keys) return 1;
 
     printf("\n");
-    printf("you have %i keys\n", old_key_count);
+    printf("you already have %i keys:\n", old_key_count);
     for (int i = 0; i < old_key_count; i++) {
         printf("key #%i: %s", i, old_keys + (SSH_KEY_BUFF_SIZE * i));
     }
     printf("\n");
-    printf("you have %i new keys\n", new_key_count);
+    printf("you have provided %i keys:\n", new_key_count);
     for (int i = 0; i < new_key_count; i++) {
         printf("key #%i: %s", i, new_keys + (SSH_KEY_BUFF_SIZE * i));
     }
 
-    
-    
-    // while (fgets(buffer, SSH_KEY_BUFF_SIZE, stdin)) {
-    //     key_count++;
-    //     printf("%i: %s\n", key_count, buffer);
-    // }
+    // for (size_t i = 0; i < old_key_count; i++) {
+        
+    // }   
 }
