@@ -17,17 +17,14 @@ char* read_keys_from_file(FILE* f, int* key_count) {
         // printf("fgets iteration\n");
         strcpy(keys + ((*key_count) * SSH_KEY_BUFF_SIZE), buffer);
         (*key_count)++;
-        printf("%i: %s", *key_count, (keys + ((*key_count) * SSH_KEY_BUFF_SIZE)));
         // realloc memory for 10 more keys when you reach previous allocated memory limit
         if (((*key_count) % DEFAULT_KEY_LIST_SIZE) == 0) {
-            char* tmp = realloc(keys, (SSH_KEY_BUFF_SIZE * (((*key_count) / DEFAULT_KEY_LIST_SIZE)+1)));
+            char* tmp = realloc(keys, (SSH_KEY_BUFF_SIZE * (*key_count + DEFAULT_KEY_LIST_SIZE)));
             if (!tmp) {
                 perror("failed realloc extra memory for old ssh keys array");
                 return NULL;
             }
             keys = tmp;
-            printf("added 2 more via realloc; key_count=%i\n",*key_count);
-            printf("current key_count = %i\n\n", (((*key_count) / DEFAULT_KEY_LIST_SIZE)+1));
         }
     }
     return keys;
