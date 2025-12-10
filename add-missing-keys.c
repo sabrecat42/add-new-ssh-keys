@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define SSH_KEY_BUFF_SIZE 8192
+#define SSH_KEY_BUFF_SIZE 256
 #define DEFAULT_KEY_LIST_SIZE 2
 
 // will modify old_key_count as side effect
@@ -13,8 +13,23 @@ char* read_keys_from_file(FILE* f, int* key_count) {
     char buffer[SSH_KEY_BUFF_SIZE];
     // initialize to 0 just in case. 
     *key_count = 0;
+
+    // char* test_str = malloc(3);
+    // stpcpy(test_str, "123");
+    // char char_str[] = "123";
+    // // =3, only counts chars (excl. '\0')
+    // printf("size of malloc_str: %zu\n", strlen(test_str));
+    // // this = 4, bc '\0' at the end is part of the data size in memory
+    // printf("size of str_arr: %zu\n", sizeof(char_str));
+    
     while (fgets(buffer, SSH_KEY_BUFF_SIZE, f)) {
-        // printf("fgets iteration\n");
+        // add new line to end of each shh key string
+        if (*(buffer + strlen(buffer)-1) != '\n') {
+            // printf("last char in key is not new line: %s", buffer);
+            *(buffer + strlen(buffer)) = '\n';
+            *(buffer + strlen(buffer) + 1) = '\0';
+        }
+
         strcpy(keys + ((*key_count) * SSH_KEY_BUFF_SIZE), buffer);
         (*key_count)++;
         // realloc memory for 10 more keys when you reach previous allocated memory limit
@@ -30,7 +45,7 @@ char* read_keys_from_file(FILE* f, int* key_count) {
     return keys;
 }
 
-char* read_old_keys(const char* filename, int* old_key_count) {
+char* read_keys_from_location(const char* filename, int* old_key_count) {
     // open authorized_keys
     FILE* fp = fopen(filename, "r");
     if (!fp) {
@@ -68,17 +83,26 @@ char* read_old_keys(const char* filename, int* old_key_count) {
 
 int main(void) {
     int old_key_count = 0;
-    // int new_key_count = 0;
+    int new_key_count = 0;
     const char* filename = "/Users/adrian/.ssh/authorized_keys";
 
-    char* old_keys = read_old_keys(filename, &old_key_count);
+    char* old_keys = read_keys_from_location(filename, &old_key_count);
     if (!old_keys) return 1;
+    char* new_keys = read_keys_from_file(stdin, &new_key_count);
+    if (!new_keys) return 1;
 
     printf("\n");
     printf("you have %i keys\n", old_key_count);
     for (int i = 0; i < old_key_count; i++) {
         printf("key #%i: %s", i, old_keys + (SSH_KEY_BUFF_SIZE * i));
     }
+    printf("\n");
+    printf("you have %i new keys\n", new_key_count);
+    for (int i = 0; i < new_key_count; i++) {
+        printf("key #%i: %s", i, new_keys + (SSH_KEY_BUFF_SIZE * i));
+    }
+
+    
     
     // while (fgets(buffer, SSH_KEY_BUFF_SIZE, stdin)) {
     //     key_count++;
