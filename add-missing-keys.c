@@ -89,18 +89,6 @@ char* read_keys_from_location(const char* filename, int* old_key_count) {
     return result;
 }
 
-// void*** malloc_2d_array(size_t row_size, size_t col_size, size_t data_size, size_t data_pointer_size) {
-//     // each row is a pointer -> actual rows (arrays)
-//     void*** matrix = malloc(row_size * data_pointer_size);
-//     for (size_t i=0; i < row_size; i++) {
-//         // allocate 
-//         matrix[i] = malloc(col_size * data_pointer_size);
-//         for (size_t j=0; j < col_size; j++) {
-//             matrix[i][j] = malloc(data_size);
-//         }
-//     }
-// }
-
 int main(void) {
     int old_key_count = 0;
     int new_key_count = 0;
@@ -125,11 +113,6 @@ int main(void) {
     printf("\n\n");
 
     // could be optimized if exact count of unique keys are known
-    // char* final_keys = malloc(SSH_KEY_BUFF_SIZE * (old_key_count + new_key_count));
-    int final_keys_count = old_key_count + new_key_count;
-
-    // int* dupl_table[][] = malloc(old_key_count * new_key_count);
-
     bool* dupl_table = malloc(old_key_count * new_key_count * sizeof(bool));
     bool** dupl_table_idx = malloc(old_key_count * sizeof(bool*));
     for (size_t i = 0; i < old_key_count; i++) {
@@ -137,23 +120,23 @@ int main(void) {
     }
     
 
-    for (size_t i = 0; i < old_key_count; i++) {
-        char* old_key_i = (old_keys + (SSH_KEY_BUFF_SIZE * i));
+    int final_keys_count = old_key_count;
+    for (size_t j = 0; j < new_key_count; j++) {
+        char* new_key_j = (new_keys + (SSH_KEY_BUFF_SIZE * j));
         // printf("old key %zu: %s", i, old_key_i);
-        for (size_t j = 0; j < new_key_count; j++) {
-            char* new_key_j = (new_keys + (SSH_KEY_BUFF_SIZE * j));
+        bool is_duplicated = false;
+        for (size_t i = 0; i < old_key_count; i++) {
+            char* old_key_i = (old_keys + (SSH_KEY_BUFF_SIZE * i));
             // printf("new key %zu: %s", j, new_key_j);
             if (str_eq(old_key_i, new_key_j)) {
                 // printf("\nold key %zu (%s) \n matches new key %zu (%s)\n", i, old_key_i, j, new_key_j);
                 dupl_table_idx[i][j] = true;
-                final_keys_count = final_keys_count - 1;
+                is_duplicated = true;
             } else {
                 dupl_table_idx[i][j] = false;
-                // copystr(final_keys+(final_keys_count * SSH_KEY_BUFF_SIZE), old_key_i);
-                // final_keys_count++;
             }
         }
-        // TODO: figure out how to write unique keys to final_keys
+        if (!is_duplicated) final_keys_count++;
     }
 
     char** final_keys = malloc(final_keys_count * sizeof(char*));
@@ -170,13 +153,14 @@ int main(void) {
         // skip adding old_key if it matches any of the new keys
         bool matches_old_key = false;
         for (size_t j = 0; j < old_key_count; j++) {
-            if (dupl_table_idx[i][j]) {
+            if (dupl_table_idx[j][i]) {
                 matches_old_key  = true;
                 break;
             }
         }
         if (!matches_old_key) {
-            final_keys[old_key_count + i] = (new_keys + (SSH_KEY_BUFF_SIZE * i));
+            final_keys[old_key_count + unique_key_idx] = (new_keys + (SSH_KEY_BUFF_SIZE * i));
+            unique_key_idx++;
         }
     }
 
@@ -185,7 +169,6 @@ int main(void) {
         printf("Key %zu: %s", i, final_keys[i]);
     }
     
-
     // printf("old key 4: %s", (old_keys + (SSH_KEY_BUFF_SIZE * 4)));
     // printf("old key 5: %s", (old_keys + (SSH_KEY_BUFF_SIZE * 5)));
 
