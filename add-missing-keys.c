@@ -6,6 +6,8 @@
 #define SSH_KEY_BUFF_SIZE 256
 #define DEFAULT_KEY_LIST_SIZE 2
 
+bool using_def_keys_location = false;
+
 size_t str_len(char* str) {
     size_t len = 0;
     while (*(str + len) != '\0') {
@@ -32,12 +34,17 @@ bool str_eq(char* str1, char* str2) {
 }
 
 char* str_cat(char* str1, char* str2) {
-    char* cat_str = malloc(str_len(str1) + str_len(str2) + 1);
-    if (!cat_str) fprintf(stderr, "cannot malloc str_cat");
-    for (size_t i = 0; i < str_len(str2); i++) {
-        copystr(cat_str, str1);
-        copystr(cat_str + str_len(str1), str2);
+    size_t len1 = str_len(str1);
+    size_t len2 = str_len(str1);
+
+    char* cat_str = malloc(len1 + len2 + 1);
+    if (!cat_str) {
+        fprintf(stderr, "cannot malloc str_cat");
+        return NULL;
     }
+
+    copystr(cat_str, str1);
+    copystr(cat_str + len1, str2);
     return cat_str;
 }
 
@@ -89,11 +96,39 @@ char* read_keys_from_location(const char* filename, int* old_key_count) {
     return result;
 }
 
-int main(void) {
+int main(int argc, char* argv[]) {
+    char* filename = NULL;
+    switch (argc)
+    {
+    case 1: { // read from stdin; write to default location
+        using_def_keys_location = true;
+        char* home_dir = getenv("HOME");
+        if (!home_dir) {
+            fprintf(stderr, "failed to get user home dir");
+            return 1;
+        }
+        filename = str_cat(home_dir, "/.ssh/authorized_keys");
+        break;
+    }
+    case 2: // read from stdin; write to user defined location
+        filename = argv[1];
+        break;
+    // case 3:
+    //     char* in_keys = argv[1];
+    //     filename = argv[2];
+    //     break;
+    default:
+        fprintf(stderr, "Usage:\ncurl \"https://...\" | amk-ssh\ncurl \"https://...\" | amk-ssh <authorized_keys-location>\n");
+        // amk-ssh <public-key(s)> <authorized_keys-location>\n
+        return 1;
+    }
+    if (!filename) {
+        fprintf(stderr, "internal error: no filename was assigned");
+        return 1;
+    }
+
     int old_key_count = 0;
     int new_key_count = 0;
-    const char* filename = "/Users/adrian/.ssh/authorized_keys";
-
     char* old_keys = read_keys_from_location(filename, &old_key_count);
     if (!old_keys) return 1;
     char* new_keys = read_keys_from_file(stdin, &new_key_count);
@@ -168,6 +203,20 @@ int main(void) {
     for (size_t i = 0; i < final_keys_count; i++) {
         printf("Key %zu: %s", i, final_keys[i]);
     }
+
+    FILE *fptr;
+
+    // Open a file in writing mode
+    fptr = fopen(filename, "w");
+    if (using_def_keys_location) {
+        free(filename);
+    }
+    // Write some text to the file
+    for (size_t i=0; i<final_keys_count; i++) {
+        fprintf(fptr, "%s", final_keys[i]);
+    }
+    // Close the file
+    fclose(fptr);
     
     // printf("old key 4: %s", (old_keys + (SSH_KEY_BUFF_SIZE * 4)));
     // printf("old key 5: %s", (old_keys + (SSH_KEY_BUFF_SIZE * 5)));
